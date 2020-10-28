@@ -1,13 +1,13 @@
 import {
   Address,
   DaoData,
+  Network,
   Networkish,
   OptimisticGameData,
   GovernQueueData,
 } from './types'
 import { ErrorInvalidNetwork, ErrorUnexpectedResult } from './errors'
 import { toNetwork } from './utils'
-import Network from './utils/network'
 import GraphqlClient from './GraphqlClient'
 import {
   QUERY_DAO,
@@ -25,6 +25,19 @@ export type ConnectorTheGraphConfig = {
   verbose?: boolean
 }
 
+function getSubgraphUrl(network: Network): string | null {
+  if (network.chainId === 1) {
+    return null
+  }
+  if (network.chainId === 4) {
+    return 'https://api.thegraph.com/subgraphs/name/aragon/aragon-govern-rinkeby'
+  }
+  if (network.chainId === 100) {
+    return null
+  }
+  return null
+}
+
 class GovernCore {
   #gql: GraphqlClient
   readonly config: ConnectorTheGraphConfig
@@ -34,16 +47,16 @@ class GovernCore {
     this.config = config
     this.network = toNetwork(config.network)
 
-    const subgraphUrl = config.subgraphUrl || this.network.subgraphUrl
+    const orgSubgraphUrl = config.subgraphUrl || getSubgraphUrl(this.network)
 
-    if (!subgraphUrl) {
+    if (!orgSubgraphUrl) {
       throw new ErrorInvalidNetwork(
         `The chainId ${this.network.chainId} is not supported ` +
           `by the TheGraph connector.`
       )
     }
 
-    this.#gql = new GraphqlClient(subgraphUrl, {
+    this.#gql = new GraphqlClient(orgSubgraphUrl, {
       verbose: config.verbose,
     })
   }
